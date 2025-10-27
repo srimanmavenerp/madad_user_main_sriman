@@ -1,0 +1,2 @@
+C:/Users/saifu/User app and web-n/User app and web/android/app/.cxx/RelWithDebInfo/5b14p471/armeabi-v7a/CMakeFiles/edit_cache.dir
+C:/Users/saifu/User app and web-n/User app and web/android/app/.cxx/RelWithDebInfo/5b14p471/armeabi-v7a/CMakeFiles/rebuild_cache.dir

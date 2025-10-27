@@ -1,0 +1,2 @@
+C:/maven/madad/User app and web/android/app/.cxx/Debug/5654404i/armeabi-v7a/CMakeFiles/edit_cache.dir
+C:/maven/madad/User app and web/android/app/.cxx/Debug/5654404i/armeabi-v7a/CMakeFiles/rebuild_cache.dir

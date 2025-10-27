@@ -1,0 +1,1 @@
+C:\maven\madad\User app and web\build\app\intermediates\cxx\Debug\5654404i\obj\x86_64
