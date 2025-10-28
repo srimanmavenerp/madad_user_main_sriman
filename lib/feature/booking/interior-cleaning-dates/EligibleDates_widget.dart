@@ -1,6 +1,3 @@
-
-
-
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -74,15 +71,66 @@ class _EligibleDatesViewState extends State<EligibleDatesView> {
     }).length;
   }
 
+  void showCenteredDialog(String message) {
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        backgroundColor: Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.info_outline, color: Colors.orange, size: 48),
+              const SizedBox(height: 16),
+              Text(
+                "Notice",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.orange.shade800,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: Colors.black87,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange.shade600,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                ),
+                onPressed: () => Get.back(),
+                child: const Text(
+                  "OK",
+                  style: TextStyle(fontSize: 16, color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      barrierDismissible: false, // user must press OK
+    );
+  }
+
   Future<void> _submitSelectedDates() async {
     if (_userSelectedDates.isEmpty) {
-      Get.snackbar(
-        "No Selection",
-        "Please select at least one date",
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.orange,
-        colorText: Colors.white,
-      );
+      showCenteredDialog(
+          "     No Selection,\n Please select at least one date");
       return;
     }
 
@@ -105,12 +153,8 @@ class _EligibleDatesViewState extends State<EligibleDatesView> {
       // }
 
       if (response.statusCode == 200) {
-        Get.snackbar(
-          "Success",
-          "Dates submitted successfully!",
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.green,
-          colorText: Colors.white,
+        showCenteredDialog(
+          "Success,\n Dates submitted successfully!",
         );
 
         setState(() {
@@ -120,13 +164,10 @@ class _EligibleDatesViewState extends State<EligibleDatesView> {
             _apiSelectedDates.clear();
             _monthHasApiDates.clear();
           });
-
         });
 
         await controller.getEligibleDates(widget.bookingId);
-      }
-
-      else {
+      } else {
         String errorMessage = "Failed to submit dates";
         bool showInPopup = false;
 
@@ -240,7 +281,8 @@ class _EligibleDatesViewState extends State<EligibleDatesView> {
       ),
       body: Obx(() {
         if (controller.isLoading.value) {
-          return const Center(child: CircularProgressIndicator(color: Colors.blue));
+          return const Center(
+              child: CircularProgressIndicator(color: Colors.blue));
         }
 
         if (controller.errorMessage.isNotEmpty) {
@@ -361,7 +403,8 @@ class _EligibleDatesViewState extends State<EligibleDatesView> {
                         ),
                         calendarBuilders: CalendarBuilders(
                           defaultBuilder: (context, day, focusedDay) {
-                            final dateStr = day.toIso8601String().substring(0, 10);
+                            final dateStr =
+                                day.toIso8601String().substring(0, 10);
 
                             // Check if this date is in API selected dates (RED)
                             if (_apiSelectedDates.contains(dateStr)) {
@@ -415,8 +458,10 @@ class _EligibleDatesViewState extends State<EligibleDatesView> {
 
                           for (var month in eligibleMonths) {
                             if (month.selectedDateRange != null) {
-                              final start = DateTime.parse(month.selectedDateRange!.start ?? '');
-                              final end = DateTime.parse(month.selectedDateRange!.end ?? '');
+                              final start = DateTime.parse(
+                                  month.selectedDateRange!.start ?? '');
+                              final end = DateTime.parse(
+                                  month.selectedDateRange!.end ?? '');
                               if (!day.isBefore(start) && !day.isAfter(end)) {
                                 return true;
                               }
@@ -427,7 +472,8 @@ class _EligibleDatesViewState extends State<EligibleDatesView> {
                         selectedDayPredicate: (_) => false,
 
                         onDaySelected: (selectedDay, focusedDay) {
-                          final dateStr = selectedDay.toIso8601String().substring(0, 10);
+                          final dateStr =
+                              selectedDay.toIso8601String().substring(0, 10);
                           print("You tapped on: $dateStr");
 
                           // ❗️ Keep this check to avoid modifying API-selected (red) dates
@@ -557,7 +603,6 @@ class _EligibleDatesViewState extends State<EligibleDatesView> {
                         },
                       ),
                     ),
-
                     Container(
                       padding: const EdgeInsets.all(16),
                       child: Column(
@@ -660,7 +705,9 @@ class _EligibleDatesViewState extends State<EligibleDatesView> {
                       height: 50,
                       margin: const EdgeInsets.only(left: 8),
                       child: ElevatedButton(
-                        onPressed: _userSelectedDates.isNotEmpty ? _submitSelectedDates : null,
+                        onPressed: _userSelectedDates.isNotEmpty
+                            ? _submitSelectedDates
+                            : null,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF4A90E2),
                           disabledBackgroundColor: Colors.grey[300],
@@ -690,8 +737,18 @@ class _EligibleDatesViewState extends State<EligibleDatesView> {
 
   String _getMonthName(int month) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
     ];
     return months[month - 1];
   }

@@ -1,7 +1,7 @@
 name: madaduser
 description: A new Flutter application.
 publish_to: 'none' #
-version: 1.0.8+11
+version: 1.0.9+0
 
 environment:
   sdk: ^3.5.3
@@ -86,6 +86,7 @@ dependencies:
   flutter_riverpod: ^2.6.1
   flutter_spinkit: ^5.2.2
   animated_text_kit: ^4.3.0
+  # in_app_update: ^4.2.5
 
 
 
