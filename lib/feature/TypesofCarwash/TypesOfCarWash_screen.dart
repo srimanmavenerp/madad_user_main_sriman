@@ -56,7 +56,13 @@ class TypesOfCarWashView extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
         if (controller.error.value != null) {
-          return Center(child: Text('Error: ${controller.error.value}'));
+          if (controller.error.value != null) {
+            return ErrorWidgetCenter(
+              message: controller.error.value!,
+              // onRetry: () => controller.fetchServicesByCategory("category_id"),
+            );
+          }
+          return const SizedBox(); // Or your normal widget
         }
 
         // Fetch services and optionally reorder
@@ -81,7 +87,8 @@ class TypesOfCarWashView extends StatelessWidget {
             final service = reorderedServices[index];
 
             // Safely get label for this category and index
-            final label = (labelTexts.containsKey(categoryId) &&
+            final label =
+                (labelTexts.containsKey(categoryId) &&
                     index < labelTexts[categoryId]!.length)
                 ? labelTexts[categoryId]![index]
                 : 'Book';
@@ -141,7 +148,9 @@ class TypesOfCarWashView extends StatelessWidget {
                       const SizedBox(height: 6),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 4),
+                          horizontal: 12,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: color,
                           borderRadius: BorderRadius.circular(8),
@@ -162,6 +171,54 @@ class TypesOfCarWashView extends StatelessWidget {
           },
         );
       }),
+    );
+  }
+}
+
+class ErrorWidgetCenter extends StatelessWidget {
+  final String message;
+  final IconData icon;
+
+  const ErrorWidgetCenter({
+    Key? key,
+    required this.message,
+    this.icon = Icons.error_outline,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 60, color: Colors.redAccent),
+            const SizedBox(height: 16),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 16, color: Colors.black87),
+            ),
+
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: () =>
+                  Get.back(), // Close the error widget before retrying
+              icon: const Icon(Icons.backspace),
+              label: const Text('back'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -744,12 +744,8 @@ Future<void> main() async {
   }
 
   // Request notification permissions
-  NotificationSettings settings =
-      await FirebaseMessaging.instance.requestPermission(
-    alert: true,
-    badge: true,
-    sound: true,
-  );
+  NotificationSettings settings = await FirebaseMessaging.instance
+      .requestPermission(alert: true, badge: true, sound: true);
   if (kDebugMode) {
     print('Push notification permission: ${settings.authorizationStatus}');
   }
@@ -764,7 +760,8 @@ Future<void> main() async {
 
     await flutterLocalNotificationsPlugin
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
+          AndroidFlutterLocalNotificationsPlugin
+        >()
         ?.createNotificationChannel(channel);
   }
 
@@ -822,8 +819,8 @@ Future<void> main() async {
     if (!kIsWeb) {
       path = await initDynamicLinks();
     }
-    final RemoteMessage? remoteMessage =
-        await FirebaseMessaging.instance.getInitialMessage();
+    final RemoteMessage? remoteMessage = await FirebaseMessaging.instance
+        .getInitialMessage();
     if (remoteMessage != null) {
       body = NotificationHelper.convertNotification(remoteMessage.data);
     }
@@ -836,8 +833,11 @@ Future<void> main() async {
   if (kDebugMode) print("FCM Token: $fcmToken");
 
   Map<String, Map<String, String>> languages = await di.init();
-  runApp(ProviderScope(
-      child: MyApp(languages: languages, body: body, route: path)));
+  runApp(
+    ProviderScope(
+      child: MyApp(languages: languages, body: body, route: path),
+    ),
+  );
 }
 
 // ---------------------- DYNAMIC LINKS ----------------------
@@ -872,11 +872,14 @@ class _MyAppState extends State<MyApp> {
   void _route() async {
     Get.find<SplashController>().getConfigData().then((success) async {
       if (Get.find<LocationController>().getUserAddress() != null) {
-        AddressModel addressModel =
-            Get.find<LocationController>().getUserAddress()!;
+        AddressModel addressModel = Get.find<LocationController>()
+            .getUserAddress()!;
         ZoneResponseModel responseModel = await Get.find<LocationController>()
-            .getZone(addressModel.latitude.toString(),
-                addressModel.longitude.toString(), false);
+            .getZone(
+              addressModel.latitude.toString(),
+              addressModel.longitude.toString(),
+              false,
+            );
         addressModel.availableServiceCountInZone =
             responseModel.totalServiceCount;
         Get.find<LocationController>().saveUserAddress(addressModel);
@@ -909,29 +912,37 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return GetBuilder<ThemeController>(builder: (themeController) {
-      return GetBuilder<LocalizationController>(builder: (localizeController) {
-        return GetBuilder<SplashController>(builder: (splashController) {
-          if (kIsWeb && splashController.configModel.content == null) {
-            return const SizedBox();
-          } else {
-            return GetMaterialApp(
-              title: AppConstants.appName,
-              debugShowCheckedModeBanner: false,
-              navigatorKey: Get.key,
-              theme: themeController.darkTheme ? dark : light,
-              locale: localizeController.locale,
-              translations: Messages(languages: widget.languages),
-              fallbackLocale: Locale(AppConstants.languages[0].languageCode!,
-                  AppConstants.languages[0].countryCode),
-              initialRoute: kIsWeb
-                  ? RouteHelper.getInitialRoute()
-                  : RouteHelper.getSplashRoute(widget.body, widget.route),
-              getPages: RouteHelper.routes,
+    return GetBuilder<ThemeController>(
+      builder: (themeController) {
+        return GetBuilder<LocalizationController>(
+          builder: (localizeController) {
+            return GetBuilder<SplashController>(
+              builder: (splashController) {
+                if (kIsWeb && splashController.configModel.content == null) {
+                  return const SizedBox();
+                } else {
+                  return GetMaterialApp(
+                    title: AppConstants.appName,
+                    debugShowCheckedModeBanner: false,
+                    navigatorKey: Get.key,
+                    theme: themeController.darkTheme ? dark : light,
+                    locale: localizeController.locale,
+                    translations: Messages(languages: widget.languages),
+                    fallbackLocale: Locale(
+                      AppConstants.languages[0].languageCode!,
+                      AppConstants.languages[0].countryCode,
+                    ),
+                    initialRoute: kIsWeb
+                        ? RouteHelper.getInitialRoute()
+                        : RouteHelper.getSplashRoute(widget.body, widget.route),
+                    getPages: RouteHelper.routes,
+                  );
+                }
+              },
             );
-          }
-        });
-      });
-    });
+          },
+        );
+      },
+    );
   }
 }

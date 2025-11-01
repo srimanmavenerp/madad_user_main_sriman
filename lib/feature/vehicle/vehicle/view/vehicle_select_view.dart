@@ -29,8 +29,9 @@ class VehicleSelectView extends StatefulWidget {
 class _VehicleSelectViewState extends State<VehicleSelectView> {
   final VehicleController vehicleController = Get.find();
   final VariantController variantController = Get.put(VariantController());
-  final TypesOfCarWashController typesOfCarWashController =
-      Get.put(TypesOfCarWashController());
+  final TypesOfCarWashController typesOfCarWashController = Get.put(
+    TypesOfCarWashController(),
+  );
 
   final RxString selectedBrand = ''.obs;
   final RxString selectedType = ''.obs;
@@ -63,10 +64,12 @@ class _VehicleSelectViewState extends State<VehicleSelectView> {
     _brandController.text = selectedBrand.value;
     _modelController.text = selectedModel.value;
 
-    _brandController
-        .addListener(() => selectedBrand.value = _brandController.text);
-    _modelController
-        .addListener(() => selectedModel.value = _modelController.text);
+    _brandController.addListener(
+      () => selectedBrand.value = _brandController.text,
+    );
+    _modelController.addListener(
+      () => selectedModel.value = _modelController.text,
+    );
     _additionalDetailsController.addListener(() {});
     _autoCareFuture = fetchAutoCareVariants();
 
@@ -80,8 +83,10 @@ class _VehicleSelectViewState extends State<VehicleSelectView> {
           WillPopScope(
             onWillPop: () async => false,
             child: AlertDialog(
-              title: const Text("Authentication Required",
-                  style: TextStyle(fontWeight: FontWeight.bold)),
+              title: const Text(
+                "Authentication Required",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
               content: const Text("Please log in to avail our services."),
               actions: [
                 ElevatedButton(
@@ -119,18 +124,25 @@ class _VehicleSelectViewState extends State<VehicleSelectView> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(vehicle.brand,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 16)),
-                  Text(vehicle.model,
-                      style:
-                          const TextStyle(fontSize: 14, color: Colors.black87)),
-                  Text("Color: ${vehicle.color}",
-                      style:
-                          const TextStyle(fontSize: 13, color: Colors.black54)),
-                  Text("No: ${vehicle.vehicleNo}",
-                      style:
-                          const TextStyle(fontSize: 13, color: Colors.black54)),
+                  Text(
+                    vehicle.brand,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  Text(
+                    vehicle.model,
+                    style: const TextStyle(fontSize: 14, color: Colors.black87),
+                  ),
+                  Text(
+                    "Color: ${vehicle.color}",
+                    style: const TextStyle(fontSize: 13, color: Colors.black54),
+                  ),
+                  Text(
+                    "No: ${vehicle.vehicleNo}",
+                    style: const TextStyle(fontSize: 13, color: Colors.black54),
+                  ),
                 ],
               ),
             ),
@@ -143,14 +155,19 @@ class _VehicleSelectViewState extends State<VehicleSelectView> {
                       ? Colors.green
                       : Theme.of(context).primaryColor,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8)),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 8,
+                  ),
                 ),
                 child: Text(
                   isSelected ? "Selected" : "Select",
                   style: const TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold),
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
@@ -186,46 +203,61 @@ class _VehicleSelectViewState extends State<VehicleSelectView> {
   Future<String?> _getZoneId() async {
     try {
       final locationController = Get.find<LocationController>();
+      final sharedPreferences = Get.find<SharedPreferences>();
+
+      // ✅ 1. Try addressList first
       final addresses = locationController.addressList;
-
-      if (addresses == null || addresses.isEmpty) {
-        print('[Zone Tracking] No addresses available in address list.');
-        return null;
-      }
-
-      print('[Zone Tracking] Address list (${addresses.length} items):');
-      for (int i = 0; i < addresses.length; i++) {
-        final address = addresses[i];
-        print(
-            '  [$i] zoneId: ${address.zoneId}, full address: ${address.toString()}');
-      }
-
-      const maxChecks = 7;
-      for (int i = 0; i < addresses.length && i < maxChecks; i++) {
-        final zoneId = addresses[i].zoneId;
-        if (zoneId != null && zoneId.trim().isNotEmpty) {
-          print('Zone Final zoneId (from index $i): $zoneId');
-          return zoneId;
-        } else {
-          print('ZoneId at index $i is null or empty.');
+      if (addresses != null && addresses.isNotEmpty) {
+        for (final address in addresses) {
+          final zoneId = address.zoneId;
+          if (zoneId != null && zoneId.trim().isNotEmpty) {
+            print('[ZoneID] Found from addressList: $zoneId');
+            return zoneId;
+          }
         }
       }
 
-      print('No valid zoneId found in first $maxChecks addresses.');
+      // ✅ 2. Fallback: try stored userAddress
+      final savedAddressStr = sharedPreferences.getString(
+        AppConstants.userAddress,
+      );
+      if (savedAddressStr != null && savedAddressStr.isNotEmpty) {
+        final savedAddress = AddressModel.fromJson(jsonDecode(savedAddressStr));
+        if (savedAddress.zoneId != null &&
+            savedAddress.zoneId!.trim().isNotEmpty) {
+          print(
+            '[ZoneID] Found from SharedPreferences: ${savedAddress.zoneId}',
+          );
+          return savedAddress.zoneId;
+        }
+      }
+
+      print('[ZoneID] Not found in addressList or SharedPreferences.');
       return null;
     } catch (e, stack) {
-      print('Zone ERROR: $e');
-      print('Stack trace: $stack');
+      print('[ZoneID ERROR] $e\n$stack');
       return null;
     }
   }
 
   Future<bool> _checkLocation() async {
-    final zoneId = await _getZoneId();
+    final sharedPreferences = Get.find<SharedPreferences>();
+    try {
+      final addressStr = sharedPreferences.getString(AppConstants.userAddress);
+      if (addressStr == null || addressStr.isEmpty) {
+        throw 'No address saved';
+      }
 
-    if (zoneId == null || zoneId.trim().isEmpty) {
-      print('[Location Check] Invalid or missing zoneId.');
+      final address = AddressModel.fromJson(jsonDecode(addressStr));
+      final zoneId = address.zoneId;
 
+      if (zoneId == null || zoneId.trim().isEmpty) {
+        print('[Location Check] Invalid or missing zoneId->${zoneId}.');
+        throw 'Invalid zoneId';
+      }
+
+      return true;
+    } catch (_) {
       showCustomSnackbar(
         title: 'Warning',
         message: 'Please select your area from profile settings to proceed.',
@@ -233,171 +265,152 @@ class _VehicleSelectViewState extends State<VehicleSelectView> {
         position: SnackPosition.TOP,
         mainButton: TextButton(
           onPressed: () {
-            Get.back(); // Close the snackbar
+            Get.back();
             Get.toNamed(RouteHelper.getAddAddressRoute(true));
           },
           child: const Text(
             'Add Address',
-            style: TextStyle(
-              color: Colors.black,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
           ),
         ),
-        duration: const Duration(seconds: 2),
+        duration: const Duration(seconds: 3),
       );
-
       return false;
     }
-
-    return true;
   }
 
   Future<void> fetchAutoCareVariants() async {
-    print(' [Debug] Starting fetchAutoCareVariants...');
-
+    print('[AutoCare] Fetching variants...');
     final zoneId = await _getZoneId();
-    if (zoneId == null || zoneId.trim().isEmpty) {
-      print('zoneId is null or empty in fetchAutoCareVariants');
 
+    if (zoneId == null || zoneId.trim().isEmpty) {
+      print('[AutoCare] ❌ ZoneId missing');
+      showCustomSnackbar(
+        title: 'Warning',
+        message: 'Please set your location to see available packages.',
+        type: SnackbarType.warning,
+        position: SnackPosition.TOP,
+      );
       return;
     }
 
     try {
       final url = Uri.parse(
-          '${AppConstants.baseUrl}${AppConstants.getAutoCareVariantByServiceUrl(widget.serviceId, zoneId)}');
-      print(' Requesting URL: $url');
+        '${AppConstants.baseUrl}${AppConstants.getAutoCareVariantByServiceUrl(widget.serviceId, zoneId)}',
+      );
+      print('[AutoCare] Request → $url');
 
       final response = await http.get(url);
-      print(' Response status: ${response.statusCode}');
+      print('[AutoCare] Status → ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        print(' Response data keys: ${data.keys}');
-
-        if (data['data'] != null && data['data'] is List) {
-          final List<dynamic> dataList = data['data'] as List;
-          print(' Found ${dataList.length} packages');
-
-          setState(() {
-            autoCarePackages.assignAll(
-              dataList.map((item) => ServicePackage.fromJson(item)).toList(),
-            );
-            selectedVariants.clear();
-            for (int i = 0; i < autoCarePackages.length; i++) {
-              if (autoCarePackages[i].variantOptions.isNotEmpty) {
-                selectedVariants[i] = autoCarePackages[i].variantOptions.first;
-              }
-            }
-          });
-
-          print(' Successfully loaded ${autoCarePackages.length} packages');
-        } else {
-          print(' No data found in response or data is not a list');
+        final items = data['data'] as List?;
+        if (items == null || items.isEmpty) {
           showCustomSnackbar(
             title: 'Notice',
-            message: 'No service packages found in your area.',
-            type: SnackbarType
-                .info, // automatically sets blue background and info icon
+            message: 'No packages available in your area.',
+            type: SnackbarType.info,
             position: SnackPosition.BOTTOM,
-            duration: const Duration(seconds: 2),
           );
+          return;
         }
+
+        setState(() {
+          autoCarePackages.assignAll(
+            items.map((e) => ServicePackage.fromJson(e)).toList(),
+          );
+          selectedVariants.clear();
+          for (int i = 0; i < autoCarePackages.length; i++) {
+            if (autoCarePackages[i].variantOptions.isNotEmpty) {
+              selectedVariants[i] = autoCarePackages[i].variantOptions.first;
+            }
+          }
+        });
+
+        print('[AutoCare] ✅ Loaded ${autoCarePackages.length} packages');
       } else {
-        print(' HTTP Error: ${response.statusCode}');
-        print(' Response body: ${response.body}');
+        print('[AutoCare] ❌ Server Error: ${response.statusCode}');
         showCustomSnackbar(
-          title: 'Server Error',
-          message: 'Failed to fetch service packages. Please try again later.',
-          type: SnackbarType
-              .error, // sets red background and error icon automatically
+          title: 'Error',
+          message: 'Failed to fetch packages. Try again later.',
+          type: SnackbarType.error,
           position: SnackPosition.BOTTOM,
-          duration: const Duration(seconds: 2),
         );
       }
     } catch (e, stack) {
-      print(' Exception during fetch: $e');
-      print(' Stack trace: $stack');
+      print('[AutoCare] Exception: $e\n$stack');
       showCustomSnackbar(
         title: 'Error',
-        message:
-            'Something went wrong while fetching packages. Please try again.',
-        type: SnackbarType
-            .error, // automatically sets red background and error icon
+        message: 'Something went wrong while fetching packages.',
+        type: SnackbarType.error,
         position: SnackPosition.BOTTOM,
-        duration: const Duration(seconds: 2),
       );
     }
   }
 
   Future<void> fetchVehicleData() async {
-    final authController = Get.find<AuthController>();
-    final token = authController.getUserToken();
-
-    if (token == null || token.isEmpty) return;
-
     try {
-      var url = Uri.parse(
-          'https://madadservices.com/api/v1/customer/service/vehicles');
-      print('Fetching vehicle data from URL: $url');
+      final authController = Get.find<AuthController>();
+      final token = authController.getUserToken();
+      if (token == null || token.isEmpty) {
+        print('[Vehicle] Missing token');
+        return;
+      }
 
-      var request = http.Request('GET', url);
+      final url = Uri.parse(
+        'https://madadservices.com/api/v1/customer/service/vehicles',
+      );
+      print('[Vehicle] Fetching → $url');
+
+      final request = http.Request('GET', url);
       request.headers['Authorization'] = 'Bearer $token';
+      final response = await request.send();
 
-      http.StreamedResponse response = await request.send();
-      print('HTTP Status Code: ${response.statusCode}');
-
-      String responseBody = await response.stream.bytesToString();
-      print('Raw Response Body: $responseBody');
+      final body = await response.stream.bytesToString();
+      print('[Vehicle] Status: ${response.statusCode}, Body: $body');
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(responseBody);
-        print('Decoded JSON Response: $data');
-
-        if (data['data'] != null) {
-          if (data['data'] is List) {
-            List<VehicleModel> vehicles = (data['data'] as List)
-                .map((item) => VehicleModel.fromJson(item))
-                .toList();
-            print('Parsed Vehicle List: $vehicles');
-            vehicleController.vehicleList.assignAll(vehicles);
-          } else if (data['data'] is Map) {
-            VehicleModel vehicle = VehicleModel.fromJson(data['data']);
-            print('Parsed Single Vehicle: $vehicle');
-            vehicleController.vehicleList.assignAll([vehicle]);
-          }
+        final data = jsonDecode(body);
+        if (data['data'] is List) {
+          vehicleController.vehicleList.assignAll(
+            (data['data'] as List)
+                .map((e) => VehicleModel.fromJson(e))
+                .toList(),
+          );
+        } else if (data['data'] is Map) {
+          vehicleController.vehicleList.assignAll([
+            VehicleModel.fromJson(data['data']),
+          ]);
         }
       } else {
-        print('Vehicle API Error: ${response.statusCode}');
-        Get.snackbar(
-            'Error', 'Failed to fetch vehicles: ${response.statusCode}');
+        showCustomSnackbar(
+          title: 'Error',
+          message: 'Failed to fetch vehicles (${response.statusCode}).',
+          type: SnackbarType.error,
+        );
       }
-    } catch (e) {
-      print('Vehicle API Exception: $e');
+    } catch (e, stack) {
+      print('[Vehicle] Exception: $e\n$stack');
       showCustomSnackbar(
         title: 'Error',
-        message: 'Failed to fetch vehicles: $e',
-        type: SnackbarType.error, // sets red background and error icon
+        message: 'Unable to load vehicle data.',
+        type: SnackbarType.error,
         position: SnackPosition.BOTTOM,
-        duration: const Duration(seconds: 2),
       );
     }
   }
 
   void _onTypeChanged(String? typeName) async {
-    final hasLocation = await _checkLocation();
-    if (!hasLocation) return;
-
+    if (!(await _checkLocation())) return;
     selectedType.value = typeName ?? '';
 
-    if (typeName != null &&
-        typeName.isNotEmpty &&
-        widget.serviceId.isNotEmpty) {
-      final selectedTypeObj = vehicleController.typeList.firstWhere(
-        (type) => type['vehicle_name'] == typeName,
+    if (typeName != null && widget.serviceId.isNotEmpty) {
+      final typeObj = vehicleController.typeList.firstWhere(
+        (t) => t['vehicle_name'] == typeName,
         orElse: () => <String, dynamic>{},
       );
-      final typeId = selectedTypeObj['id']?.toString() ?? '';
+      final typeId = typeObj['id']?.toString() ?? '';
 
       vehicleController.selectedVehicle.value = VehicleModel(
         id: _uuid.v4(),
@@ -411,11 +424,14 @@ class _VehicleSelectViewState extends State<VehicleSelectView> {
         vehicleNo: numberController.text,
       );
 
+      final zoneId = await _getZoneId();
       if (widget.categoryId != '274ceb96-647d-4fd5-8f66-c813fc2d51d6') {
-        final zoneId = await _getZoneId();
         if (zoneId != null && zoneId.isNotEmpty) {
-          variantController.fetchVariants(widget.serviceId, typeId,
-              zoneId: zoneId);
+          variantController.fetchVariants(
+            widget.serviceId,
+            typeId,
+            zoneId: zoneId,
+          );
           selectedVariants.clear();
         }
       } else {
@@ -430,6 +446,262 @@ class _VehicleSelectViewState extends State<VehicleSelectView> {
     selectedType.value = newValue;
     await fetchAutoCareVariants();
   }
+
+  // Future<String?> _getZoneId() async {
+  //   try {
+  //     final locationController = Get.find<LocationController>();
+  //     final addresses = locationController.addressList;
+
+  //     if (addresses == null || addresses.isEmpty) {
+  //       print('[Zone Tracking] No addresses available in address list.');
+  //       return null;
+  //     }
+
+  //     print('[Zone Tracking] Address list (${addresses.length} items):');
+  //     for (int i = 0; i < addresses.length; i++) {
+  //       final address = addresses[i];
+  //       print(
+  //         '  [$i] zoneId: ${address.zoneId}, full address: ${address.toString()}',
+  //       );
+  //     }
+
+  //     const maxChecks = 7;
+  //     for (int i = 0; i < addresses.length && i < maxChecks; i++) {
+  //       final zoneId = addresses[i].zoneId;
+  //       if (zoneId != null && zoneId.trim().isNotEmpty) {
+  //         print('Zone Final zoneId (from index $i): $zoneId');
+  //         return zoneId;
+  //       } else {
+  //         print('ZoneId at index $i is null or empty.');
+  //       }
+  //     }
+
+  //     print('No valid zoneId found in first $maxChecks addresses.');
+  //     return null;
+  //   } catch (e, stack) {
+  //     print('Zone ERROR: $e');
+  //     print('Stack trace: $stack');
+  //     return null;
+  //   }
+  // }
+
+  // Future<bool> _checkLocation() async {
+  //   final sharedPreferences = Get.find<SharedPreferences>();
+  //   final zoneId = AddressModel.fromJson(
+  //     jsonDecode(sharedPreferences.getString(AppConstants.userAddress)!),
+  //   ).zoneId;
+
+  //   if (zoneId == null || zoneId.trim().isEmpty) {
+  //     print('[Location Check] Invalid or missing zoneId.');
+
+  //     showCustomSnackbar(
+  //       title: 'Warning',
+  //       message: 'Please select your area from profile settings to proceed.',
+  //       type: SnackbarType.warning,
+  //       position: SnackPosition.TOP,
+  //       mainButton: TextButton(
+  //         onPressed: () {
+  //           Get.back(); // Close the snackbar
+  //           Get.toNamed(RouteHelper.getAddAddressRoute(true));
+  //         },
+  //         child: const Text(
+  //           'Add Address',
+  //           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+  //         ),
+  //       ),
+  //       duration: const Duration(seconds: 2),
+  //     );
+
+  //     return false;
+  //   }
+
+  //   return true;
+  // }
+
+  // Future<void> fetchAutoCareVariants() async {
+  //   print(' [Debug] Starting fetchAutoCareVariants...');
+
+  //   final zoneId = await _getZoneId();
+  //   if (zoneId == null || zoneId.trim().isEmpty) {
+  //     print('zoneId is null or empty in fetchAutoCareVariants');
+
+  //     return;
+  //   }
+
+  //   try {
+  //     final url = Uri.parse(
+  //       '${AppConstants.baseUrl}${AppConstants.getAutoCareVariantByServiceUrl(widget.serviceId, zoneId)}',
+  //     );
+  //     print(' Requesting URL: $url');
+
+  //     final response = await http.get(url);
+  //     print(' Response status: ${response.statusCode}');
+
+  //     if (response.statusCode == 200) {
+  //       final data = jsonDecode(response.body);
+  //       print(' Response data keys: ${data.keys}');
+
+  //       if (data['data'] != null && data['data'] is List) {
+  //         final List<dynamic> dataList = data['data'] as List;
+  //         print(' Found ${dataList.length} packages');
+
+  //         setState(() {
+  //           autoCarePackages.assignAll(
+  //             dataList.map((item) => ServicePackage.fromJson(item)).toList(),
+  //           );
+  //           selectedVariants.clear();
+  //           for (int i = 0; i < autoCarePackages.length; i++) {
+  //             if (autoCarePackages[i].variantOptions.isNotEmpty) {
+  //               selectedVariants[i] = autoCarePackages[i].variantOptions.first;
+  //             }
+  //           }
+  //         });
+
+  //         print(' Successfully loaded ${autoCarePackages.length} packages');
+  //       } else {
+  //         print(' No data found in response or data is not a list');
+  //         showCustomSnackbar(
+  //           title: 'Notice',
+  //           message: 'No service packages found in your area.',
+  //           type: SnackbarType
+  //               .info, // automatically sets blue background and info icon
+  //           position: SnackPosition.BOTTOM,
+  //           duration: const Duration(seconds: 2),
+  //         );
+  //       }
+  //     } else {
+  //       print(' HTTP Error: ${response.statusCode}');
+  //       print(' Response body: ${response.body}');
+  //       showCustomSnackbar(
+  //         title: 'Server Error',
+  //         message: 'Failed to fetch service packages. Please try again later.',
+  //         type: SnackbarType
+  //             .error, // sets red background and error icon automatically
+  //         position: SnackPosition.BOTTOM,
+  //         duration: const Duration(seconds: 2),
+  //       );
+  //     }
+  //   } catch (e, stack) {
+  //     print(' Exception during fetch: $e');
+  //     print(' Stack trace: $stack');
+  //     showCustomSnackbar(
+  //       title: 'Error',
+  //       message:
+  //           'Something went wrong while fetching packages. Please try again.',
+  //       type: SnackbarType
+  //           .error, // automatically sets red background and error icon
+  //       position: SnackPosition.BOTTOM,
+  //       duration: const Duration(seconds: 2),
+  //     );
+  //   }
+  // }
+
+  // Future<void> fetchVehicleData() async {
+  //   final authController = Get.find<AuthController>();
+  //   final token = authController.getUserToken();
+
+  //   if (token == null || token.isEmpty) return;
+
+  //   try {
+  //     var url = Uri.parse(
+  //       'https://madadservices.com/api/v1/customer/service/vehicles',
+  //     );
+  //     print('Fetching vehicle data from URL: $url');
+
+  //     var request = http.Request('GET', url);
+  //     request.headers['Authorization'] = 'Bearer $token';
+
+  //     http.StreamedResponse response = await request.send();
+  //     print('HTTP Status Code: ${response.statusCode}');
+
+  //     String responseBody = await response.stream.bytesToString();
+  //     print('Raw Response Body: $responseBody');
+
+  //     if (response.statusCode == 200) {
+  //       final data = jsonDecode(responseBody);
+  //       print('Decoded JSON Response: $data');
+
+  //       if (data['data'] != null) {
+  //         if (data['data'] is List) {
+  //           List<VehicleModel> vehicles = (data['data'] as List)
+  //               .map((item) => VehicleModel.fromJson(item))
+  //               .toList();
+  //           print('Parsed Vehicle List: $vehicles');
+  //           vehicleController.vehicleList.assignAll(vehicles);
+  //         } else if (data['data'] is Map) {
+  //           VehicleModel vehicle = VehicleModel.fromJson(data['data']);
+  //           print('Parsed Single Vehicle: $vehicle');
+  //           vehicleController.vehicleList.assignAll([vehicle]);
+  //         }
+  //       }
+  //     } else {
+  //       print('Vehicle API Error: ${response.statusCode}');
+  //       Get.snackbar(
+  //         'Error',
+  //         'Failed to fetch vehicles: ${response.statusCode}',
+  //       );
+  //     }
+  //   } catch (e) {
+  //     print('Vehicle API Exception: $e');
+  //     showCustomSnackbar(
+  //       title: 'Error',
+  //       message: 'Failed to fetch vehicles: $e',
+  //       type: SnackbarType.error, // sets red background and error icon
+  //       position: SnackPosition.BOTTOM,
+  //       duration: const Duration(seconds: 2),
+  //     );
+  //   }
+  // }
+
+  // void _onTypeChanged(String? typeName) async {
+  //   final hasLocation = await _checkLocation();
+  //   if (!hasLocation) return;
+
+  //   selectedType.value = typeName ?? '';
+
+  //   if (typeName != null &&
+  //       typeName.isNotEmpty &&
+  //       widget.serviceId.isNotEmpty) {
+  //     final selectedTypeObj = vehicleController.typeList.firstWhere(
+  //       (type) => type['vehicle_name'] == typeName,
+  //       orElse: () => <String, dynamic>{},
+  //     );
+  //     final typeId = selectedTypeObj['id']?.toString() ?? '';
+
+  //     vehicleController.selectedVehicle.value = VehicleModel(
+  //       id: _uuid.v4(),
+  //       userId: _uuid.v4(),
+  //       brand: _brandController.text,
+  //       type: typeId,
+  //       model: _modelController.text,
+  //       color: colorController.text,
+  //       contact_no: contactController.text,
+  //       additional_details: _additionalDetailsController.text,
+  //       vehicleNo: numberController.text,
+  //     );
+
+  //     if (widget.categoryId != '274ceb96-647d-4fd5-8f66-c813fc2d51d6') {
+  //       final zoneId = await _getZoneId();
+  //       if (zoneId != null && zoneId.isNotEmpty) {
+  //         variantController.fetchVariants(
+  //           widget.serviceId,
+  //           typeId,
+  //           zoneId: zoneId,
+  //         );
+  //         selectedVariants.clear();
+  //       }
+  //     } else {
+  //       await fetchAutoCareVariants();
+  //       selectedVariants.clear();
+  //     }
+  //   }
+  // }
+
+  // void onVehicleTypeSelected(String? newValue) async {
+  //   if (newValue == null) return;
+  //   selectedType.value = newValue;
+  //   await fetchAutoCareVariants();
+  // }
 
   String? validateMobileNumber(String? value, String countryCode) {
     if (value == null || value.trim().isEmpty) {
@@ -507,15 +779,6 @@ class _VehicleSelectViewState extends State<VehicleSelectView> {
       //Get.snackbar('Error', 'Please select a package variant');
       return;
     }
-
-    // print('--- ////////////////////////////Mobile Only Form Data ---');
-    // print('Mobile Number: $fullContactNo');
-    // print('Additional Details: ${_additionalDetailsController.text}');
-    // print('Selected Variant: ${selectedVariant.variantKey} - Price: ${selectedVariant.price}');
-    // print('Category ID: ${widget.categoryId}');
-    // print('Is Mobile Only Category: $isMobileOnlyCategory');
-    // print('Is Manual Category: $isManualCategory');
-    // print('-----------------------------');
 
     VehicleModel? vehicleToSave;
 
@@ -619,25 +882,10 @@ class _VehicleSelectViewState extends State<VehicleSelectView> {
       additional_details: _additionalDetailsController.text,
     );
 
-    // print('--- Cart Model Body ---');
-    // print('Service ID: ${cartModelBody.serviceId}');
-    // print('Category ID: ${cartModelBody.categoryId}');
-    // print('Sub Category ID: ${cartModelBody.subCategoryId}');
-    // print('Variant Key: ${cartModelBody.variantKey}');
-    // print('Contact No: ${cartModelBody.contact_no}');
-    // print('Additional Details: ${cartModelBody.additional_details}');
-    // print('Guest ID: ${cartModelBody.guestId}');
-    // print('----------------------');
-
     try {
       // print('Attempting to add to cart...');
-      final response = await Get.find<CartController>()
-          .cartRepo
+      final response = await Get.find<CartController>().cartRepo
           .addToCartListToServer(cartModelBody);
-
-      // print('Cart response status code: ${response.statusCode}');
-      // print('Cart response body: ${response.body}');
-      // print('Cart response status text: ${response.statusText}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         // Parse the response body to check for actual success
@@ -689,11 +937,13 @@ class _VehicleSelectViewState extends State<VehicleSelectView> {
         final locationController = Get.find<LocationController>();
         final couponController = Get.find<CouponController>();
 
-// Reset tab/page
-        checkoutController.updateState(PageState.orderDetails,
-            shouldUpdate: false);
+        // Reset tab/page
+        checkoutController.updateState(
+          PageState.orderDetails,
+          shouldUpdate: false,
+        );
 
-// Load all required data
+        // Load all required data
         await cartController.getCartListFromServer(shouldUpdate: false);
         await checkoutController.getOfflinePaymentMethod(true);
         scheduleController.resetScheduleData(shouldUpdate: false);
@@ -701,9 +951,9 @@ class _VehicleSelectViewState extends State<VehicleSelectView> {
         locationController.updateSelectedServiceLocationType();
         await couponController.getCouponList();
 
-// Now navigate
+        // Now navigate
         Get.to(() => const CheckoutScreen('orderDetails', 'addressId'));
-//  to checkout screen
+        //  to checkout screen
         // Get.to(() => CheckoutScreen('orderDetails', 'addressId'));
 
         // print('Navigation completed');
@@ -733,20 +983,6 @@ class _VehicleSelectViewState extends State<VehicleSelectView> {
       );
     }
   }
-  // Widget _buildFeatureRow(String feature) {
-  //   return Padding(
-  //     padding: const EdgeInsets.symmetric(vertical: 1.5),
-  //     child: Row(
-  //       children: [
-  //         const Icon(Icons.check, color: Colors.green, size: 12),
-  //         const SizedBox(width: 4),
-  //         Expanded(
-  //           child: Text(feature, style: const TextStyle(fontSize: 10)),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
 
   Widget _buildCarWashFlow() {
     return SingleChildScrollView(
@@ -754,42 +990,48 @@ class _VehicleSelectViewState extends State<VehicleSelectView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Select Option",
-              style: TextStyle(fontWeight: FontWeight.bold)),
-          Obx(() => Column(
-                children: [
-                  RadioListTile<String>(
-                    title: const Text("Existing Vehicle"),
-                    value: 'existing',
-                    groupValue: selectedOption.value,
-                    onChanged: (value) {
-                      selectedOption.value = value!;
-                      vehicleController.clearSelectedExistingVehicle();
-                      clearFormControllers();
-                      fetchVehicleData();
-                    },
-                  ),
-                  RadioListTile<String>(
-                    title: const Text("New Vehicle"),
-                    value: 'new',
-                    groupValue: selectedOption.value,
-                    onChanged: (value) {
-                      selectedOption.value = value!;
-                      vehicleController.clearSelectedExistingVehicle();
-                      clearFormControllers();
-                    },
-                  ),
-                ],
-              )),
+          const Text(
+            "Select Option",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          Obx(
+            () => Column(
+              children: [
+                RadioListTile<String>(
+                  title: const Text("Existing Vehicle"),
+                  value: 'existing',
+                  groupValue: selectedOption.value,
+                  onChanged: (value) {
+                    selectedOption.value = value!;
+                    vehicleController.clearSelectedExistingVehicle();
+                    clearFormControllers();
+                    fetchVehicleData();
+                  },
+                ),
+                RadioListTile<String>(
+                  title: const Text("New Vehicle"),
+                  value: 'new',
+                  groupValue: selectedOption.value,
+                  onChanged: (value) {
+                    selectedOption.value = value!;
+                    vehicleController.clearSelectedExistingVehicle();
+                    clearFormControllers();
+                  },
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 16),
           Obx(() {
             final isNew = selectedOption.value == 'new';
-            final isExistingAndSelected = selectedOption.value == 'existing' &&
+            final isExistingAndSelected =
+                selectedOption.value == 'existing' &&
                 vehicleController.selectedExistingVehicle.value != null;
             print(
-                'CarWashFlow: Rendering vehicle section - isNew: $isNew, isExistingAndSelected: $isExistingAndSelected, '
-                'isLoading: ${vehicleController.isLoading.value}, vehicleList length: ${vehicleController.vehicleList.length}, '
-                'selectedExistingVehicle: ${vehicleController.selectedExistingVehicle.value?.id ?? "none"}');
+              'CarWashFlow: Rendering vehicle section - isNew: $isNew, isExistingAndSelected: $isExistingAndSelected, '
+              'isLoading: ${vehicleController.isLoading.value}, vehicleList length: ${vehicleController.vehicleList.length}, '
+              'selectedExistingVehicle: ${vehicleController.selectedExistingVehicle.value?.id ?? "none"}',
+            );
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -800,43 +1042,50 @@ class _VehicleSelectViewState extends State<VehicleSelectView> {
                       children: [
                         TextFormField(
                           controller: _brandController,
-                          decoration:
-                              const InputDecoration(labelText: "Vehicle Brand"),
+                          decoration: const InputDecoration(
+                            labelText: "Vehicle Brand",
+                          ),
                           validator: (value) => value == null || value.isEmpty
                               ? 'Please enter Brand'
                               : null,
                         ),
                         const SizedBox(height: 12),
-                        Obx(() => DropdownButtonFormField<String>(
-                              decoration: const InputDecoration(
-                                  labelText: "Vehicle Type"),
-                              value: vehicleController.typeList.any((type) =>
+                        Obx(
+                          () => DropdownButtonFormField<String>(
+                            decoration: const InputDecoration(
+                              labelText: "Vehicle Type",
+                            ),
+                            value:
+                                vehicleController.typeList.any(
+                                  (type) =>
                                       type['vehicle_name'] ==
-                                      selectedType.value)
-                                  ? selectedType.value
-                                  : null,
-                              items: vehicleController.typeList
-                                  .map<DropdownMenuItem<String>>((typeObj) {
-                                    final name =
-                                        typeObj['vehicle_name'] as String;
-                                    return DropdownMenuItem<String>(
-                                      value: name,
-                                      child: Text(name),
-                                    );
-                                  })
-                                  .toSet()
-                                  .toList(),
-                              onChanged: _onTypeChanged,
-                              validator: (value) =>
-                                  value == null || value.isEmpty
-                                      ? 'Please select a type'
-                                      : null,
-                            )),
+                                      selectedType.value,
+                                )
+                                ? selectedType.value
+                                : null,
+                            items: vehicleController.typeList
+                                .map<DropdownMenuItem<String>>((typeObj) {
+                                  final name =
+                                      typeObj['vehicle_name'] as String;
+                                  return DropdownMenuItem<String>(
+                                    value: name,
+                                    child: Text(name),
+                                  );
+                                })
+                                .toSet()
+                                .toList(),
+                            onChanged: _onTypeChanged,
+                            validator: (value) => value == null || value.isEmpty
+                                ? 'Please select a type'
+                                : null,
+                          ),
+                        ),
                         const SizedBox(height: 12),
                         TextFormField(
                           controller: _modelController,
-                          decoration:
-                              const InputDecoration(labelText: "Vehicle Model"),
+                          decoration: const InputDecoration(
+                            labelText: "Vehicle Model",
+                          ),
                           validator: (value) => value == null || value.isEmpty
                               ? 'Please enter Model'
                               : null,
@@ -844,8 +1093,9 @@ class _VehicleSelectViewState extends State<VehicleSelectView> {
                         const SizedBox(height: 12),
                         TextFormField(
                           controller: numberController,
-                          decoration:
-                              const InputDecoration(labelText: "Vehicle No"),
+                          decoration: const InputDecoration(
+                            labelText: "Vehicle No",
+                          ),
                           validator: (value) => value == null || value.isEmpty
                               ? 'Please enter Vehicle No'
                               : null,
@@ -853,8 +1103,9 @@ class _VehicleSelectViewState extends State<VehicleSelectView> {
                         const SizedBox(height: 12),
                         TextFormField(
                           controller: colorController,
-                          decoration:
-                              const InputDecoration(labelText: "Vehicle Color"),
+                          decoration: const InputDecoration(
+                            labelText: "Vehicle Color",
+                          ),
                           validator: (value) => value == null || value.isEmpty
                               ? 'Please enter Color'
                               : null,
@@ -868,13 +1119,16 @@ class _VehicleSelectViewState extends State<VehicleSelectView> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text("Your Vehicles",
-                            style: TextStyle(fontWeight: FontWeight.w600)),
+                        const Text(
+                          "Your Vehicles",
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
                         const SizedBox(height: 12),
                         Obx(() {
                           if (vehicleController.isLoading.value) {
                             return const Center(
-                                child: CircularProgressIndicator());
+                              child: CircularProgressIndicator(),
+                            );
                           }
                           if (vehicleController.vehicleList.isEmpty) {}
 
@@ -903,33 +1157,37 @@ class _VehicleSelectViewState extends State<VehicleSelectView> {
                                           height: 350,
                                           child: ListView.builder(
                                             itemCount: vehicleController
-                                                .vehicleList.length,
+                                                .vehicleList
+                                                .length,
                                             itemBuilder: (context, index) {
                                               final vehicle = vehicleController
                                                   .vehicleList[index];
                                               final isSelected =
                                                   selectedVehicle?.id ==
-                                                      vehicle.id;
+                                                  vehicle.id;
                                               return _buildVehicleCard(
                                                 vehicle,
                                                 isSelected: isSelected,
                                                 onSelect: () async {
                                                   vehicleController
                                                       .setSelectedExistingVehicle(
-                                                          vehicle);
+                                                        vehicle,
+                                                      );
                                                   _handleExistingVehicleSelection(
-                                                      vehicle);
+                                                    vehicle,
+                                                  );
                                                   Navigator.of(context).pop();
 
                                                   final prefs =
-                                                      await SharedPreferences
-                                                          .getInstance();
+                                                      await SharedPreferences.getInstance();
                                                   await prefs.setString(
-                                                      'selected_vehicle_id',
-                                                      vehicle.id.toString());
+                                                    'selected_vehicle_id',
+                                                    vehicle.id.toString(),
+                                                  );
 
                                                   print(
-                                                      "Selected Vehicle ID stored in CarWashFlow: ${vehicle.id}");
+                                                    "Selected Vehicle ID stored in CarWashFlow: ${vehicle.id}",
+                                                  );
 
                                                   if (widget.categoryId !=
                                                       '274ceb96-647d-4fd5-8f66-c813fc2d51d6') {
@@ -939,10 +1197,10 @@ class _VehicleSelectViewState extends State<VehicleSelectView> {
                                                         zoneId.isNotEmpty) {
                                                       variantController
                                                           .fetchVariants(
-                                                              widget.serviceId,
-                                                              vehicle.type ??
-                                                                  '',
-                                                              zoneId: zoneId);
+                                                            widget.serviceId,
+                                                            vehicle.type ?? '',
+                                                            zoneId: zoneId,
+                                                          );
                                                       selectedVariants.clear();
                                                     }
                                                   } else {
@@ -967,8 +1225,8 @@ class _VehicleSelectViewState extends State<VehicleSelectView> {
                                     readOnly: true,
                                     validator: (value) =>
                                         selectedVehicle == null
-                                            ? 'Please select a vehicle'
-                                            : null,
+                                        ? 'Please select a vehicle'
+                                        : null,
                                   ),
                                 ),
                               ),
@@ -990,7 +1248,8 @@ class _VehicleSelectViewState extends State<VehicleSelectView> {
                   if (selectedOption.value == 'existing' &&
                       vehicleController.selectedExistingVehicle.value == null) {
                     return const Text(
-                        'Please select a vehicle to see packages');
+                      'Please select a vehicle to see packages',
+                    );
                   }
                   if (selectedOption.value == 'new' &&
                       selectedType.value.isEmpty) {
@@ -1008,8 +1267,9 @@ class _VehicleSelectViewState extends State<VehicleSelectView> {
                         return _buildFancyPackageCard(
                           package: package,
                           packageIndex: index,
-                          bubbleColor:
-                              index == 0 ? Colors.purple : Colors.amber,
+                          bubbleColor: index == 0
+                              ? Colors.purple
+                              : Colors.amber,
                           bgColor: Colors.white,
                           icon: index == 0
                               ? Icons.shield_outlined
@@ -1037,8 +1297,9 @@ class _VehicleSelectViewState extends State<VehicleSelectView> {
                             description: package.description,
                           ),
                           packageIndex: index,
-                          bubbleColor:
-                              index == 0 ? Colors.purple : Colors.amber,
+                          bubbleColor: index == 0
+                              ? Colors.purple
+                              : Colors.amber,
                           bgColor: Colors.white,
                           icon: index == 0
                               ? Icons.shield_outlined
@@ -1062,37 +1323,42 @@ class _VehicleSelectViewState extends State<VehicleSelectView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Select Option",
-              style: TextStyle(fontWeight: FontWeight.bold)),
-          Obx(() => Column(
-                children: [
-                  RadioListTile<String>(
-                    title: const Text("Existing Vehicle"),
-                    value: 'existing',
-                    groupValue: selectedOption.value,
-                    onChanged: (value) {
-                      selectedOption.value = value!;
-                      vehicleController.clearSelectedExistingVehicle();
-                      clearFormControllers();
-                      fetchVehicleData();
-                    },
-                  ),
-                  RadioListTile<String>(
-                    title: const Text("New Vehicle"),
-                    value: 'new',
-                    groupValue: selectedOption.value,
-                    onChanged: (value) {
-                      selectedOption.value = value!;
-                      vehicleController.clearSelectedExistingVehicle();
-                      clearFormControllers();
-                    },
-                  ),
-                ],
-              )),
+          const Text(
+            "Select Option",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          Obx(
+            () => Column(
+              children: [
+                RadioListTile<String>(
+                  title: const Text("Existing Vehicle"),
+                  value: 'existing',
+                  groupValue: selectedOption.value,
+                  onChanged: (value) {
+                    selectedOption.value = value!;
+                    vehicleController.clearSelectedExistingVehicle();
+                    clearFormControllers();
+                    fetchVehicleData();
+                  },
+                ),
+                RadioListTile<String>(
+                  title: const Text("New Vehicle"),
+                  value: 'new',
+                  groupValue: selectedOption.value,
+                  onChanged: (value) {
+                    selectedOption.value = value!;
+                    vehicleController.clearSelectedExistingVehicle();
+                    clearFormControllers();
+                  },
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 16),
           Obx(() {
             final isNew = selectedOption.value == 'new';
-            final isExistingAndSelected = selectedOption.value == 'existing' &&
+            final isExistingAndSelected =
+                selectedOption.value == 'existing' &&
                 vehicleController.selectedExistingVehicle.value != null;
 
             return Column(
@@ -1105,43 +1371,50 @@ class _VehicleSelectViewState extends State<VehicleSelectView> {
                       children: [
                         TextFormField(
                           controller: _brandController,
-                          decoration:
-                              const InputDecoration(labelText: "Vehicle Brand"),
+                          decoration: const InputDecoration(
+                            labelText: "Vehicle Brand",
+                          ),
                           validator: (value) => value == null || value.isEmpty
                               ? 'Please enter Brand'
                               : null,
                         ),
                         const SizedBox(height: 12),
-                        Obx(() => DropdownButtonFormField<String>(
-                              decoration: const InputDecoration(
-                                  labelText: "Vehicle Type"),
-                              value: vehicleController.typeList.any((type) =>
+                        Obx(
+                          () => DropdownButtonFormField<String>(
+                            decoration: const InputDecoration(
+                              labelText: "Vehicle Type",
+                            ),
+                            value:
+                                vehicleController.typeList.any(
+                                  (type) =>
                                       type['vehicle_name'] ==
-                                      selectedType.value)
-                                  ? selectedType.value
-                                  : null,
-                              items: vehicleController.typeList
-                                  .map<DropdownMenuItem<String>>((typeObj) {
-                                    final name =
-                                        typeObj['vehicle_name'] as String;
-                                    return DropdownMenuItem<String>(
-                                      value: name,
-                                      child: Text(name),
-                                    );
-                                  })
-                                  .toSet()
-                                  .toList(),
-                              onChanged: _onTypeChanged,
-                              validator: (value) =>
-                                  value == null || value.isEmpty
-                                      ? 'Please select a type'
-                                      : null,
-                            )),
+                                      selectedType.value,
+                                )
+                                ? selectedType.value
+                                : null,
+                            items: vehicleController.typeList
+                                .map<DropdownMenuItem<String>>((typeObj) {
+                                  final name =
+                                      typeObj['vehicle_name'] as String;
+                                  return DropdownMenuItem<String>(
+                                    value: name,
+                                    child: Text(name),
+                                  );
+                                })
+                                .toSet()
+                                .toList(),
+                            onChanged: _onTypeChanged,
+                            validator: (value) => value == null || value.isEmpty
+                                ? 'Please select a type'
+                                : null,
+                          ),
+                        ),
                         const SizedBox(height: 12),
                         TextFormField(
                           controller: _modelController,
-                          decoration:
-                              const InputDecoration(labelText: "Vehicle Model"),
+                          decoration: const InputDecoration(
+                            labelText: "Vehicle Model",
+                          ),
                           validator: (value) => value == null || value.isEmpty
                               ? 'Please enter Model'
                               : null,
@@ -1149,8 +1422,9 @@ class _VehicleSelectViewState extends State<VehicleSelectView> {
                         const SizedBox(height: 12),
                         TextFormField(
                           controller: numberController,
-                          decoration:
-                              const InputDecoration(labelText: "Vehicle No"),
+                          decoration: const InputDecoration(
+                            labelText: "Vehicle No",
+                          ),
                           validator: (value) => value == null || value.isEmpty
                               ? 'Please enter Vehicle No'
                               : null,
@@ -1158,8 +1432,9 @@ class _VehicleSelectViewState extends State<VehicleSelectView> {
                         const SizedBox(height: 12),
                         TextFormField(
                           controller: colorController,
-                          decoration:
-                              const InputDecoration(labelText: "Vehicle Color"),
+                          decoration: const InputDecoration(
+                            labelText: "Vehicle Color",
+                          ),
                           validator: (value) => value == null || value.isEmpty
                               ? 'Please enter Color'
                               : null,
@@ -1175,7 +1450,9 @@ class _VehicleSelectViewState extends State<VehicleSelectView> {
                             selectedCountryCode.value = countryCode.dialCode!;
                           },
                           onValidate: (value) => validateMobileNumber(
-                              value, selectedCountryCode.value),
+                            value,
+                            selectedCountryCode.value,
+                          ),
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
@@ -1196,15 +1473,18 @@ class _VehicleSelectViewState extends State<VehicleSelectView> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text("Your Vehicles",
-                            style: TextStyle(fontWeight: FontWeight.w600)),
+                        const Text(
+                          "Your Vehicles",
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
                         const SizedBox(height: 12),
                         Obx(() {
                           final selectedVehicle =
                               vehicleController.selectedExistingVehicle.value;
                           if (vehicleController.isLoading.value) {
                             return const Center(
-                                child: CircularProgressIndicator());
+                              child: CircularProgressIndicator(),
+                            );
                           }
                           if (vehicleController.vehicleList.isEmpty) {}
 
@@ -1233,33 +1513,37 @@ class _VehicleSelectViewState extends State<VehicleSelectView> {
                                           height: 350,
                                           child: ListView.builder(
                                             itemCount: vehicleController
-                                                .vehicleList.length,
+                                                .vehicleList
+                                                .length,
                                             itemBuilder: (context, index) {
                                               final vehicle = vehicleController
                                                   .vehicleList[index];
                                               final isSelected =
                                                   selectedVehicle?.id ==
-                                                      vehicle.id;
+                                                  vehicle.id;
                                               return _buildVehicleCard(
                                                 vehicle,
                                                 isSelected: isSelected,
                                                 onSelect: () async {
                                                   vehicleController
                                                       .setSelectedExistingVehicle(
-                                                          vehicle);
+                                                        vehicle,
+                                                      );
                                                   _handleExistingVehicleSelection(
-                                                      vehicle);
+                                                    vehicle,
+                                                  );
                                                   Navigator.of(context).pop();
 
                                                   print(
-                                                      "Selected Vehicle ID ManualCategoryFlow: ${vehicle.id}");
+                                                    "Selected Vehicle ID ManualCategoryFlow: ${vehicle.id}",
+                                                  );
 
                                                   SharedPreferences prefs =
-                                                      await SharedPreferences
-                                                          .getInstance();
+                                                      await SharedPreferences.getInstance();
                                                   await prefs.setString(
-                                                      'selected_vehicle_id',
-                                                      vehicle.id.toString());
+                                                    'selected_vehicle_id',
+                                                    vehicle.id.toString(),
+                                                  );
                                                 },
                                               );
                                             },
@@ -1299,7 +1583,9 @@ class _VehicleSelectViewState extends State<VehicleSelectView> {
                             selectedCountryCode.value = countryCode.dialCode!;
                           },
                           onValidate: (value) => validateMobileNumber(
-                              value, selectedCountryCode.value),
+                            value,
+                            selectedCountryCode.value,
+                          ),
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
@@ -1382,24 +1668,24 @@ class _VehicleSelectViewState extends State<VehicleSelectView> {
                   "Mobile Number",
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
-                Obx(() => CustomTextField(
-                      title: 'Contact Details',
-                      hintText: 'Enter your mobile number',
-                      controller: contactController,
-                      inputType: TextInputType.phone,
-                      countryDialCode: selectedCountryCode.value,
-                      onCountryChanged: (countryCode) {
-                        selectedCountryCode.value = countryCode.dialCode!;
-                      },
-                      onValidate: (value) => validateMobileNumber(
-                          value, selectedCountryCode.value),
-                    )),
+                Obx(
+                  () => CustomTextField(
+                    title: 'Contact Details',
+                    hintText: 'Enter your mobile number',
+                    controller: contactController,
+                    inputType: TextInputType.phone,
+                    countryDialCode: selectedCountryCode.value,
+                    onCountryChanged: (countryCode) {
+                      selectedCountryCode.value = countryCode.dialCode!;
+                    },
+                    onValidate: (value) =>
+                        validateMobileNumber(value, selectedCountryCode.value),
+                  ),
+                ),
                 const SizedBox(height: 16),
                 const Text(
                   "Additional Details",
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 TextFormField(
@@ -1457,18 +1743,22 @@ class _VehicleSelectViewState extends State<VehicleSelectView> {
 
   void _selectPackage(int packageIndex, ServicePackage package) {
     print(
-        '***/////////////// Selecting package for packageIndex: $packageIndex ***');
+      '***/////////////// Selecting package for packageIndex: $packageIndex ***',
+    );
     setState(() {
       print(
-          '**Before clear in selectPackage: selectedVariants = $selectedVariants ***');
+        '**Before clear in selectPackage: selectedVariants = $selectedVariants ***',
+      );
       selectedPackageIndex = packageIndex;
       selectedVariants.clear();
       print(
-          '*** DEBUG: After clear in selectPackage: selectedVariants = $selectedVariants ***');
+        '*** DEBUG: After clear in selectPackage: selectedVariants = $selectedVariants ***',
+      );
       if (package.variantOptions.isNotEmpty) {
         selectedVariants[packageIndex] = package.variantOptions.first;
         print(
-            '***  After setting variant in selectPackage: selectedVariants = $selectedVariants ***');
+          '***  After setting variant in selectPackage: selectedVariants = $selectedVariants ***',
+        );
       }
     });
   }
@@ -1496,7 +1786,8 @@ class _VehicleSelectViewState extends State<VehicleSelectView> {
           }
         });
         print(
-            '*** DEBUG: Selected package: $packageIndex, variants: $selectedVariants ***');
+          '*** DEBUG: Selected package: $packageIndex, variants: $selectedVariants ***',
+        );
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
@@ -1538,11 +1829,7 @@ class _VehicleSelectViewState extends State<VehicleSelectView> {
                       ),
                     ],
                   ),
-                  child: Icon(
-                    icon,
-                    size: 20,
-                    color: Colors.white,
-                  ),
+                  child: Icon(icon, size: 20, color: Colors.white),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -1561,7 +1848,9 @@ class _VehicleSelectViewState extends State<VehicleSelectView> {
                         Container(
                           margin: const EdgeInsets.only(top: 4),
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 2),
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: bubbleColor.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(12),
@@ -1592,11 +1881,7 @@ class _VehicleSelectViewState extends State<VehicleSelectView> {
                     ),
                   ),
                   child: isSelected
-                      ? const Icon(
-                          Icons.check,
-                          size: 16,
-                          color: Colors.white,
-                        )
+                      ? const Icon(Icons.check, size: 16, color: Colors.white)
                       : null,
                 ),
               ],
@@ -1650,8 +1935,10 @@ class _VehicleSelectViewState extends State<VehicleSelectView> {
                 ),
                 const SizedBox(height: 8),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
@@ -1677,10 +1964,7 @@ class _VehicleSelectViewState extends State<VehicleSelectView> {
                           fontSize: 14,
                         ),
                       ),
-                      icon: Icon(
-                        Icons.keyboard_arrow_down,
-                        color: bubbleColor,
-                      ),
+                      icon: Icon(Icons.keyboard_arrow_down, color: bubbleColor),
                       style: const TextStyle(
                         color: Colors.black87,
                         fontSize: 14,
@@ -1726,7 +2010,8 @@ class _VehicleSelectViewState extends State<VehicleSelectView> {
                             selectedVariants[packageIndex] = value;
                           });
                           print(
-                              '*** DEBUG: Variant changed for package $packageIndex: ${value.variant} ***');
+                            '*** DEBUG: Variant changed for package $packageIndex: ${value.variant} ***',
+                          );
                         }
                       },
                     ),
@@ -1786,15 +2071,58 @@ class _VehicleSelectViewState extends State<VehicleSelectView> {
     }
 
     final bool isManualCategory = widget.categoryId == manualCategory1;
+    final VehicleController vehicleController = Get.put(VehicleController());
 
     return Scaffold(
       appBar: AppBar(title: const Text("Select Vehicle & Package")),
       body: isManualCategory ? _buildManualCategoryFlow() : _buildCarWashFlow(),
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(16),
-        child: ElevatedButton(
-          onPressed: _addToCartWithController,
-          child: const Text("Book Now"),
+        child: Obx(
+          () => ElevatedButton(
+            onPressed: vehicleController.isBookingLoading.value
+                ? null // disable when loading
+                : () async {
+                    vehicleController.isBookingLoading.value = true;
+                    try {
+                      await _addToCartWithController();
+                    } finally {
+                      vehicleController.isBookingLoading.value = false;
+                    }
+                  },
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+            ),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 250),
+              switchInCurve: Curves.easeInOut,
+              switchOutCurve: Curves.easeInOut,
+              transitionBuilder: (Widget child, Animation<double> animation) {
+                return FadeTransition(
+                  opacity: animation,
+                  child: ScaleTransition(scale: animation, child: child),
+                );
+              },
+              child: vehicleController.isBookingLoading.value
+                  ? const SizedBox(
+                      key: ValueKey('loader'),
+                      height: 24,
+                      width: 24,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2.5,
+                      ),
+                    )
+                  : const Text(
+                      key: ValueKey('text'),
+                      "Book Now",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+            ),
+          ),
         ),
       ),
     );

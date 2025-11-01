@@ -183,8 +183,6 @@
 //   }
 // }
 
-
-
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart'; // Add GetStorage import
 import '../model/vehicle_model.dart';
@@ -217,7 +215,7 @@ class VehicleController extends GetxController {
 
   // New: GetStorage instance for persistent storage
   final GetStorage _storage = GetStorage();
-
+  final isBookingLoading = false.obs;
   @override
   void onInit() {
     super.onInit();
@@ -234,12 +232,17 @@ class VehicleController extends GetxController {
     serviceId.value = _storage.read('serviceId') ?? '';
     subCategoryId.value = _storage.read('subCategoryId') ?? '';
     categoryId.value = _storage.read('categoryId') ?? '';
-    print(' VehicleController: Loaded stored arguments: serviceId=${serviceId.value}, '
-        'subCategoryId=${subCategoryId.value}, categoryId=${categoryId.value}');
+    print(
+      ' VehicleController: Loaded stored arguments: serviceId=${serviceId.value}, '
+      'subCategoryId=${subCategoryId.value}, categoryId=${categoryId.value}',
+    );
   }
 
-
-  void setServiceArguments(String serviceId, String subCategoryId, String categoryId) {
+  void setServiceArguments(
+    String serviceId,
+    String subCategoryId,
+    String categoryId,
+  ) {
     this.serviceId.value = serviceId;
     this.subCategoryId.value = subCategoryId;
     this.categoryId.value = categoryId;
@@ -249,12 +252,10 @@ class VehicleController extends GetxController {
     _storage.write('subCategoryId', subCategoryId);
     _storage.write('categoryId', categoryId);
 
-    print('VehicleController: Set serviceId=$serviceId, subCategoryId=$subCategoryId, categoryId=$categoryId');
+    print(
+      'VehicleController: Set serviceId=$serviceId, subCategoryId=$subCategoryId, categoryId=$categoryId',
+    );
   }
-
-
-
-
 
   // New: Method to set service arguments and store them in GetStorage
   // void setServiceArguments(String serviceId, String subCategoryId, String categoryId) {
@@ -276,7 +277,8 @@ class VehicleController extends GetxController {
       final authController = Get.find<AuthController>();
       final authToken = authController.getUserToken();
       if (authToken == null || authToken.isEmpty) {
-        errorMessage.value = 'Authentication token is missing. Please log in to fetch vehicles.';
+        errorMessage.value =
+            'Authentication token is missing. Please log in to fetch vehicles.';
         isLoading.value = false;
         return;
       }
@@ -284,7 +286,10 @@ class VehicleController extends GetxController {
       //vehicleList.assignAll(fetched);
     } catch (e) {
       errorMessage.value = 'Failed to fetch user vehicles: $e';
-      customSnackBar('Failed to load your vehicles: ${e.toString()}', type: ToasterMessageType.error);
+      customSnackBar(
+        'Failed to load your vehicles: ${e.toString()}',
+        type: ToasterMessageType.error,
+      );
       print('Error fetching user vehicles: $e'); // For debugging
     } finally {
       isLoading.value = false;
@@ -306,7 +311,10 @@ class VehicleController extends GetxController {
       //brandList.value = await VehicleService.getBrands(token: authToken);
     } catch (e) {
       errorMessage.value = 'Failed to fetch brands: $e';
-      customSnackBar('Failed to load brands: ${e.toString()}', type: ToasterMessageType.error);
+      customSnackBar(
+        'Failed to load brands: ${e.toString()}',
+        type: ToasterMessageType.error,
+      );
     } finally {
       isLoading.value = false;
     }
@@ -327,7 +335,10 @@ class VehicleController extends GetxController {
       typeList.value = await VehicleService.getTypes(token: authToken);
     } catch (e) {
       errorMessage.value = 'Failed to fetch types: $e';
-      customSnackBar('Failed to load vehicle types: ${e.toString()}', type: ToasterMessageType.error);
+      customSnackBar(
+        'Failed to load vehicle types: ${e.toString()}',
+        type: ToasterMessageType.error,
+      );
     } finally {
       isLoading.value = false;
     }
@@ -348,7 +359,10 @@ class VehicleController extends GetxController {
       //modelList.value = await VehicleService.getModels(brand, token: authToken);
     } catch (e) {
       errorMessage.value = 'Failed to fetch models: $e';
-      customSnackBar('Failed to load models: ${e.toString()}', type: ToasterMessageType.error);
+      customSnackBar(
+        'Failed to load models: ${e.toString()}',
+        type: ToasterMessageType.error,
+      );
     } finally {
       isLoading.value = false;
     }
@@ -362,14 +376,18 @@ class VehicleController extends GetxController {
       final authController = Get.find<AuthController>();
       final authToken = authController.getUserToken();
       if (authToken == null || authToken.isEmpty) {
-        errorMessage.value = 'Authentication token is missing. Please log in to add vehicle.';
+        errorMessage.value =
+            'Authentication token is missing. Please log in to add vehicle.';
         isLoading.value = false;
         return;
       }
       // Assuming VehicleService.saveVehicle now takes a token
       await VehicleService.saveVehicle(vehicle, token: authToken);
       vehicleList.add(vehicle); // Add to the local list
-      customSnackBar('Vehicle added successfully', type: ToasterMessageType.success);
+      customSnackBar(
+        'Vehicle added successfully',
+        type: ToasterMessageType.success,
+      );
       // No Get.back() here, as this method might be called from within the view logic.
       // The view itself should handle navigation if needed after a successful add.
     } catch (e) {
@@ -389,17 +407,24 @@ class VehicleController extends GetxController {
       final authController = Get.find<AuthController>();
       final authToken = authController.getUserToken();
       if (authToken == null || authToken.isEmpty) {
-        errorMessage.value = 'Authentication token is missing. Please log in to delete vehicle.';
+        errorMessage.value =
+            'Authentication token is missing. Please log in to delete vehicle.';
         isLoading.value = false;
         return;
       }
       // Assuming VehicleService.deleteVehicle now takes a token
       await VehicleService.deleteVehicle(id, token: authToken);
       vehicleList.removeWhere((v) => v.id == id); // Remove from local list
-      customSnackBar('Vehicle deleted successfully', type: ToasterMessageType.success);
+      customSnackBar(
+        'Vehicle deleted successfully',
+        type: ToasterMessageType.success,
+      );
     } catch (e) {
       errorMessage.value = 'Failed to delete vehicle: ${e.toString()}';
-      customSnackBar('Failed to delete vehicle', type: ToasterMessageType.error);
+      customSnackBar(
+        'Failed to delete vehicle',
+        type: ToasterMessageType.error,
+      );
       print('Error deleting vehicle: $e'); // For debugging
     } finally {
       isLoading.value = false;
